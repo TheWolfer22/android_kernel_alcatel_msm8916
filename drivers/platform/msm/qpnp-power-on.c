@@ -1068,11 +1068,18 @@ static int qpnp_pon_config_init(struct qpnp_pon *pon)
 				}
 			}
 
+			pr_info("[Liu]%s: pon_ver=%d\n", __func__, pon_ver);
 			/* If the value read from REVISION2 register is 0x00,
 			   then there is a single register to control s2 reset.
 			   Otherwise there are separate registers for s2 reset
 			   type and s2 reset enable */
+/*MOD Begin by TCTSZ-WH,Fix long press power key no response.*/
+#ifdef CONFIG_TCT_8X16_POP10
+			if (pon_ver == 3) {
+#else
 			if (pon_ver == PON_REV2_VALUE) {
+#endif
+/*MOD by End TCTSZ-WH,Fix long press power key no response.*/
 				cfg->s2_cntl_addr = cfg->s2_cntl2_addr =
 					QPNP_PON_KPDPWR_S2_CNTL(pon->base);
 			} else {
