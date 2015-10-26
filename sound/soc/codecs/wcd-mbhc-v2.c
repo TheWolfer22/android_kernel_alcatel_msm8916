@@ -56,6 +56,13 @@
 #define FAKE_REM_RETRY_ATTEMPTS 3
 
 static int det_extn_cable_en;
+
+/* [PLATFORM]-Add-BEGIN by TCTNB.HJ, 2015/02/28*/
+#if defined(CONFIG_TCT_8X16_IDOL3) || defined(CONFIG_TCT_8X16_IDOL347)
+extern uint8_t headset_enable_27;
+#endif
+/* [PLATFORM]-Add-BEGIN by TCTNB.HJ, 2015/02/28*/
+
 module_param(det_extn_cable_en, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(det_extn_cable_en, "enable/disable extn cable detect");
@@ -209,6 +216,16 @@ static void wcd_enable_curr_micbias(const struct wcd_mbhc *mbhc,
 			0xC0, 0x80);
 		/* Program Button threshold registers as per MICBIAS */
 		wcd_program_btn_threshold(mbhc, true);
+/* [PLATFORM]-Add-BEGIN by TCTNB.HJ, 2015/02/28*/
+#if defined(CONFIG_TCT_8X16_IDOL3) || defined(CONFIG_TCT_8X16_IDOL347)
+        if(headset_enable_27){
+		pr_debug("hujin %s: set 2.7 v\n", __func__);
+		snd_soc_write(codec,
+				MSM8X16_WCD_A_ANALOG_MICB_1_VAL,
+				0xC0);
+        }
+#endif
+/* [PLATFORM]-Add-END by TCTNB.HJ, 2015/02/28*/
 		break;
 	case WCD_MBHC_EN_PULLUP:
 		snd_soc_update_bits(codec,
@@ -667,6 +684,29 @@ int wcd_mbhc_get_impedance(struct wcd_mbhc *mbhc, uint32_t *zl,
 		return -EINVAL;
 }
 
+/* [PLATFORM]-Add-BEGIN by TCTNB.HJ, 2014/12/15, BUG 869558, for temp solution */
+#ifdef CONFIG_TCT_8X16_IDOL3
+#if TEMP_SOLUTION_ENABLE
+void wcd_mbhc_enable_mbhc_micbias(struct wcd_mbhc *mbhc, bool enable)
+{
+    int ret;
+
+	if (enable) {
+		ret = snd_soc_dapm_force_enable_pin(&mbhc->codec->dapm,
+		                               "MIC BIAS External2");
+		snd_soc_dapm_sync(&mbhc->codec->dapm);
+		pr_debug("force enable MICBIAS2\n");
+	} else {
+		ret = snd_soc_dapm_disable_pin(&mbhc->codec->dapm,
+		                       "MIC BIAS External2");
+		snd_soc_dapm_sync(&mbhc->codec->dapm);
+		pr_debug("force disable MICBIAS2\n");
+	}
+}
+#endif
+#endif
+/* [PLATFORM]-Add-END by TCTNB.HJ, 2014/12/15*/
+
 static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 				enum snd_jack_types jack_type)
 {
@@ -697,6 +737,13 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 			mbhc->micbias_enable = false;
 
 		mbhc->zl = mbhc->zr = 0;
+/* [PLATFORM]-Add-BEGIN by TCTNB.HJ, 2014/12/15, BUG 869558, for temp solution */
+#ifdef CONFIG_TCT_8X16_IDOL3
+#if TEMP_SOLUTION_ENABLE
+        wcd_mbhc_enable_mbhc_micbias(mbhc, 0);
+#endif
+#endif
+/* [PLATFORM]-Add-END by TCTNB.HJ, 2014/12/15*/
 		pr_debug("%s: Reporting removal %d(%x)\n", __func__,
 			 jack_type, mbhc->hph_status);
 		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
@@ -767,6 +814,13 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 					&mbhc->zl, &mbhc->zr);
 		pr_debug("%s: Reporting insertion %d(%x)\n", __func__,
 			 jack_type, mbhc->hph_status);
+/* [PLATFORM]-Add-BEGIN by TCTNB.HJ, 2014/12/15, BUG 869558, for temp solution */
+#ifdef CONFIG_TCT_8X16_IDOL3
+#if TEMP_SOLUTION_ENABLE
+        wcd_mbhc_enable_mbhc_micbias(mbhc, 1);
+#endif
+#endif
+/* [PLATFORM]-Add-END by TCTNB.HJ, 2014/12/15*/
 		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 				    mbhc->hph_status, WCD_MBHC_JACK_MASK);
 		wcd_mbhc_clr_and_turnon_hph_padac(mbhc);
@@ -842,7 +896,16 @@ static void wcd_mbhc_find_plug_and_report(struct wcd_mbhc *mbhc,
 exit:
 	pr_debug("%s: leave\n", __func__);
 }
-
+/* [PLATFORM]-Add-BEGIN by TCTNB.HJ, 2014/11/19, headset det*/
+#if defined(CONFIG_TCT_8X16_IDOL3) || defined(CONFIG_TCT_8X16_IDOL347)
+/* To determine if cross connection occured */
+static bool wcd_check_cross_conn(struct wcd_mbhc *mbhc)
+{
+	enum wcd_mbhc_plug_type plug_type = mbhc->current_plug;
+	pr_debug("IDOL3: %s: leave, plug type: %d\n", __func__,  plug_type);
+	return false;
+}
+#else
 /* To determine if cross connection occured */
 static bool wcd_check_cross_conn(struct wcd_mbhc *mbhc)
 {
@@ -883,6 +946,9 @@ static bool wcd_check_cross_conn(struct wcd_mbhc *mbhc)
 
 	return (plug_type == MBHC_PLUG_TYPE_GND_MIC_SWAP) ? true : false;
 }
+
+#endif
+/* [PLATFORM]-Add-END by TCTNB.HJ*/
 
 static bool wcd_is_special_headset(struct wcd_mbhc *mbhc)
 {
@@ -1400,6 +1466,10 @@ static int wcd_mbhc_get_button_mask(u16 btn)
 	case 0:
 		mask = SND_JACK_BTN_0;
 		break;
+/* [PLATFORM]-Add-BEGIN by TCTNB.HJ, 2015/01/23 */
+#if defined(CONFIG_TCT_8X16_IDOL3) || defined(CONFIG_TCT_8X16_IDOL347)
+	//keep it null, only support one hook key
+#else
 	case 1:
 		mask = SND_JACK_BTN_1;
 		break;
@@ -1412,6 +1482,8 @@ static int wcd_mbhc_get_button_mask(u16 btn)
 	case 15:
 		mask = SND_JACK_BTN_4;
 		break;
+#endif
+/* [PLATFORM]-Add-EN by TCTNB.HJ, 2015/01/23*/
 	default:
 		break;
 	}
