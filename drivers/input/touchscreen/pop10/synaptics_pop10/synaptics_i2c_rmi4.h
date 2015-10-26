@@ -35,11 +35,6 @@
 #include <linux/earlysuspend.h>
 #endif
 #include <linux/debugfs.h>
-#if defined(CONFIG_SECURE_TOUCH)
-#include <linux/completion.h>
-#include <linux/atomic.h>
-#include <linux/clk.h>
-#endif
 
 #define PDT_PROPS (0x00EF)
 #define PDT_START (0x00E9)
@@ -76,8 +71,11 @@
 #define MASK_1BIT 0x01
 
 #define NAME_BUFFER_SIZE 256
-
+//#define HAVE_HALL  1
+#ifdef CONFIG_TCT_8X16_POP10
 #define HAVE_HALL
+//#define WINDOW_COVER
+#endif
 
 #define PINCTRL_STATE_ACTIVE	"pmx_ts_active"
 #define PINCTRL_STATE_SUSPEND	"pmx_ts_suspend"
@@ -117,7 +115,18 @@ struct synaptics_rmi4_fn_full_addr {
 	unsigned short ctrl_base;
 	unsigned short data_base;
 };
-
+#ifdef CONFIG_TCT_8X16_POP10
+//[FEATURE]-Add-BEGIN by TCTSZ. weihong.chen,PR-674715 2014/05/26, add new feature
+//gesture wakeup
+/*
+ * struct synaptics_rmi4_f11_extra_data - extra data of F$11
+ * @data38_offset: offset to F11_2D_DATA38 register
+ */
+struct synaptics_rmi4_f11_extra_data {
+	unsigned char data38_offset;
+};
+#endif
+//[FEATURE]-Add-END by TCTSZ.weihong.chen
 /*
  * struct synaptics_rmi4_fn - function handler data structure
  * @fn_number: function number
@@ -245,6 +254,9 @@ struct synaptics_rmi4_data {
 	unsigned short f01_cmd_base_addr;
 	unsigned short f01_ctrl_base_addr;
 	unsigned short f01_data_base_addr;
+	#ifdef CONFIG_TCT_8X16_POP10
+	unsigned short f34_ctrl_base_addr; //Add- weihong.chen, 2014/07/29, add for read config ID
+	#endif
 	int irq;
 	int sensor_max_x;
 	int sensor_max_y;
@@ -263,6 +275,18 @@ struct synaptics_rmi4_data {
 	wait_queue_head_t wait;
 	bool stay_awake;
 	bool staying_awake;
+	#ifdef CONFIG_TCT_8X16_POP10
+	//[FEATURE]-Add-BEGIN by TCTSZ. weihong.chen,FR-674715 2014/05/26, add new feature
+	//gesture wakeup
+	bool f11_wakeup_gesture;
+	//bool f12_wakeup_gesture;
+	bool enable_wakeup_gesture;
+    bool enable_palm_gesture;
+	unsigned char in_wakeup_gesture_mode ;
+	//[FEATURE]-Add-END by TCTSZ.weihong.chen
+	bool device_is_reseting;//[BUGFIX]-Add-BEGIN by TCTSZ. weihong.chen,FR-782201 2014/09/04, fix f11_init error
+	#endif
+	//gw
 	int (*i2c_read)(struct synaptics_rmi4_data *pdata, unsigned short addr,
 			unsigned char *data, unsigned short length);
 	int (*i2c_write)(struct synaptics_rmi4_data *pdata, unsigned short addr,
@@ -277,18 +301,12 @@ struct synaptics_rmi4_data {
 #endif
 #endif
 	struct pinctrl *ts_pinctrl;
+#ifdef CONFIG_TCT_8X16_POP10
+unsigned char no_sleep_setting;
+#endif
 	struct pinctrl_state *pinctrl_state_active;
 	struct pinctrl_state *pinctrl_state_suspend;
 	struct pinctrl_state *pinctrl_state_release;
-#if defined(CONFIG_SECURE_TOUCH)
-	atomic_t st_enabled;
-	atomic_t st_pending_irqs;
-	bool st_initialized;
-	struct completion st_powerdown;
-	struct completion st_irq_processed;
-	struct clk *core_clk;
-	struct clk *iface_clk;
-#endif
 };
 
 enum exp_fn {
