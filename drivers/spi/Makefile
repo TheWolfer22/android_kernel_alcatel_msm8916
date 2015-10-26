@@ -76,3 +76,7 @@ obj-$(CONFIG_SPI_TOPCLIFF_PCH)		+= spi-topcliff-pch.o
 obj-$(CONFIG_SPI_TXX9)			+= spi-txx9.o
 obj-$(CONFIG_SPI_XCOMM)		+= spi-xcomm.o
 obj-$(CONFIG_SPI_XILINX)		+= spi-xilinx.o
+
+# [PLATFORM]-Add-BEGIN by TCTSZ.chenhui, 2014/07/23, INFRARED FUNCTION
+obj-$(CONFIG_COM_INFRARED)            += spi_ice40_infrared_com_new.o
+# [PLATFORM]-Add-END by TCTSZ.chenhui, 2014/07/23, PEEL INFRARED FUNCTION
