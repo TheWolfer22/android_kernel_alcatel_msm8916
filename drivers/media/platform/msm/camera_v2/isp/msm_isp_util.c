@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,6 +25,9 @@ static DEFINE_MUTEX(bandwidth_mgr_mutex);
 static struct msm_isp_bandwidth_mgr isp_bandwidth_mgr;
 
 static uint64_t msm_isp_cpp_clk_rate;
+
+
+#define MSM_MIN_REQ_VFE_CPP_BW 1700000000
 
 #define VFE40_8974V2_VERSION 0x1001001A
 static struct msm_bus_vectors msm_isp_init_vectors[] = {
@@ -182,8 +185,12 @@ int msm_isp_update_bandwidth(enum msm_isp_hw_client client,
 				isp_bandwidth_mgr.client_info[i].ib;
 		}
 	}
-	ISP_DBG("%s: Total AB = %llu IB = %llu\n", __func__,
-			path->vectors[0].ab, path->vectors[0].ib);
+	/*All the clients combined i.e. VFE + CPP should use atleast
+	minimum recommended bandwidth*/
+	/*Begin @zhfan PR 982440 Increase ib value to avoid ISP overflow*/
+	if (path->vectors[0].ib < 6400000000)
+		path->vectors[0].ib = 6400000000;
+	/*End @zhfan PR 982440 Increase ib value to avoid ISP overflow*/
 	msm_bus_scale_client_update_request(isp_bandwidth_mgr.bus_client,
 		isp_bandwidth_mgr.bus_vector_active_idx);
 	/* Insert into circular buffer */
@@ -745,14 +752,6 @@ static long msm_isp_ioctl_unlocked(struct v4l2_subdev *sd,
 			start_fetch_eng(vfe_dev, arg);
 		mutex_unlock(&vfe_dev->core_mutex);
 		break;
-	case VIDIOC_MSM_ISP_REG_UPDATE_CMD:
-		if (arg) {
-			enum msm_vfe_input_src frame_src =
-				*((enum msm_vfe_input_src *)arg);
-			vfe_dev->hw_info->vfe_ops.core_ops.
-				reg_update(vfe_dev, (1 << frame_src));
-		}
-		break;
 	case VIDIOC_MSM_ISP_SET_SRC_STATE:
 		mutex_lock(&vfe_dev->core_mutex);
 		rc = msm_isp_set_src_state(vfe_dev, arg);
@@ -786,14 +785,6 @@ static long msm_isp_ioctl_unlocked(struct v4l2_subdev *sd,
 	case VIDIOC_MSM_ISP_SMMU_ATTACH:
 		mutex_lock(&vfe_dev->core_mutex);
 		rc = msm_isp_smmu_attach(vfe_dev->buf_mgr, arg);
-		mutex_unlock(&vfe_dev->core_mutex);
-		break;
-	case MSM_SD_NOTIFY_FREEZE:
-		vfe_dev->isp_sof_debug = 0;
-		break;
-	case VIDIOC_MSM_ISP_BUF_DONE:
-		mutex_lock(&vfe_dev->core_mutex);
-		rc = msm_isp_user_buf_done(vfe_dev, arg);
 		mutex_unlock(&vfe_dev->core_mutex);
 		break;
 	case MSM_SD_SHUTDOWN:
@@ -840,35 +831,6 @@ static long msm_isp_ioctl_compat(struct v4l2_subdev *sd,
 		rc = msm_isp_proc_cmd_list(vfe_dev, arg);
 		mutex_unlock(&vfe_dev->realtime_mutex);
 		break;
-	}
-	case VIDIOC_MSM_ISP_BUF_DONE: {
-		struct msm_isp_event_data buf_event;
-		struct msm_isp_event_data32 *buf_event32;
-		memset(&buf_event, 0, sizeof(buf_event));
-		buf_event32 =
-		  (struct msm_isp_event_data32 *)arg;
-		buf_event.input_intf = buf_event32->input_intf;
-		buf_event.frame_id = buf_event32->frame_id;
-		buf_event.timestamp.tv_sec =
-				buf_event32->timestamp.tv_sec;
-		buf_event.timestamp.tv_usec =
-				buf_event32->timestamp.tv_usec;
-		buf_event.mono_timestamp.tv_sec =
-				buf_event32->mono_timestamp.tv_sec;
-		buf_event.mono_timestamp.tv_usec =
-				buf_event32->mono_timestamp.tv_usec;
-		buf_event.u.buf_done.session_id =
-		  buf_event32->u.buf_done.session_id;
-		buf_event.u.buf_done.stream_id =
-		  buf_event32->u.buf_done.stream_id;
-		buf_event.u.buf_done.output_format =
-			buf_event32->u.buf_done.output_format;
-		buf_event.u.buf_done.buf_idx =
-			buf_event32->u.buf_done.buf_idx;
-		buf_event.u.buf_done.handle =
-			buf_event32->u.buf_done.handle;
-		cmd = VIDIOC_MSM_ISP_BUF_DONE;
-		return msm_isp_ioctl_unlocked(sd, cmd, &buf_event);
 	}
 	default:
 		return msm_isp_ioctl_unlocked(sd, cmd, arg);
@@ -1734,8 +1696,6 @@ void msm_isp_do_tasklet(unsigned long data)
 			irq_status0, irq_status1, &ts);
 		irq_ops->process_reg_update(vfe_dev,
 			irq_status0, irq_status1, &ts);
-		irq_ops->process_epoch_irq(vfe_dev,
-			irq_status0, irq_status1, &ts);
 	}
 }
 
@@ -1779,7 +1739,7 @@ end:
 int msm_isp_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct vfe_device *vfe_dev = v4l2_get_subdevdata(sd);
-	long rc = 0;
+	long rc;
 	ISP_DBG("%s\n", __func__);
 
 	mutex_lock(&vfe_dev->realtime_mutex);
@@ -1798,7 +1758,6 @@ int msm_isp_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	}
 
 	vfe_dev->reset_pending = 0;
-	vfe_dev->isp_sof_debug = 0;
 
 	if (vfe_dev->hw_info->vfe_ops.core_ops.init_hw(vfe_dev) < 0) {
 		pr_err("%s: init hardware failed\n", __func__);
@@ -1839,11 +1798,6 @@ int msm_isp_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	vfe_dev->axi_data.hw_info = vfe_dev->hw_info->axi_hw_info;
 	vfe_dev->taskletq_idx = 0;
 	vfe_dev->vt_enable = 0;
-	vfe_dev->bus_util_factor = 0;
-	rc = of_property_read_u32(vfe_dev->pdev->dev.of_node,
-			"bus-util-factor", &vfe_dev->bus_util_factor);
-	if (rc < 0)
-		ISP_DBG("%s: Use default bus utilization factor\n", __func__);
 	iommu_set_fault_handler(vfe_dev->buf_mgr->iommu_domain,
 		msm_vfe_iommu_fault_handler, vfe_dev);
 	mutex_unlock(&vfe_dev->core_mutex);
@@ -1865,7 +1819,7 @@ void msm_isp_end_avtimer(void)
 
 int msm_isp_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
-	long rc = 0;
+	long rc;
 	struct vfe_device *vfe_dev = v4l2_get_subdevdata(sd);
 	ISP_DBG("%s E\n", __func__);
 	mutex_lock(&vfe_dev->realtime_mutex);
