@@ -31,6 +31,12 @@
 
 #define XO_CLK_RATE	19200000
 
+/*[PLATFORM]-Mod-BEGIN by TCTSZ.jing.huang, 2014/8/18,add lcd power io control*/
+#ifdef CONFIG_TCT_8X16_POP10
+int lcd_power_en;
+#endif
+/*[PLATFORM]-Mod-END by TCTSZ.jing.huang, 2014/08/18*/
+
 static int mdss_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 					bool active);
 
@@ -69,6 +75,11 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 	int ret = 0;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	int i = 0;
+	/*[PLATFORM]-Mod-BEGIN by TCTSZ.jing.huang, 2014/8/18,add lcd power io control*/
+	#ifdef CONFIG_TCT_8X16_POP10
+	int rc;
+	#endif
+    /*[PLATFORM]-Mod-END by TCTSZ.jing.huang, 2014/08/18*/
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -85,9 +96,32 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 		ret = 0;
 	}
 
+			/*[PLATFORM]-Mod-BEGIN by TCTSZ.jing.huang, 2014/8/18,add lcd power io control*/
+				#ifdef CONFIG_TCT_8X16_POP10
+				rc = gpio_request(lcd_power_en, "disp_lcd_power");
+				if (rc) {
+				pr_err("request lcd power gpio failed, rc=%d\n",
+				rc);
+				return -ENODEV;
+				}
+				gpio_direction_output(lcd_power_en,0);
+				mdelay(50);
+				rc=gpio_get_value(lcd_power_en);
+				pr_debug("%s: %d;lcd_power_en_value=%d\n", __func__,__LINE__,rc);
+				gpio_free(lcd_power_en);
+				#endif
+			/*[PLATFORM]-Mod-END by TCTSZ.jing.huang, 2014/08/18*/
 	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, false))
 		pr_debug("reset disable: pinctrl not enabled\n");
 
+ /*Start sleep in mode. panel reset High-Low-delay5ms-High By ChangShengBao*/
+#ifdef CONFIG_TCT_8X16_IDOL347
+        gpio_set_value((ctrl_pdata->rst_gpio), 0);
+	msleep(5);
+        gpio_set_value((ctrl_pdata->rst_gpio), 1);
+        gpio_free(ctrl_pdata->rst_gpio);
+#endif
+/*End sleep in mode. panel reset High-Low-delay5ms-High By ChangShengBao*/
 	if (ctrl_pdata->panel_bias_vreg) {
 		pr_debug("%s: Disabling panel bias vreg. ndx = %d\n",
 		       __func__, ctrl_pdata->ndx);
@@ -121,6 +155,11 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 	int ret = 0;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	int i = 0;
+	/*[PLATFORM]-Mod-BEGIN by TCTSZ.jing.huang, 2014/8/18,add lcd power io control*/
+	#ifdef CONFIG_TCT_8X16_POP10
+	int rc;
+	#endif
+    /*[PLATFORM]-Mod-END by TCTSZ.jing.huang, 2014/08/18*/
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -165,6 +204,23 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 	 */
 	if (pdata->panel_info.cont_splash_enabled ||
 		!pdata->panel_info.mipi.lp11_init) {
+		
+			/*[PLATFORM]-Mod-BEGIN by TCTSZ.jing.huang, 2014/8/18,add lcd power io control*/
+			#ifdef CONFIG_TCT_8X16_POP10
+			rc = gpio_request(lcd_power_en, "disp_lcd_power");
+			if (rc) {
+			pr_err("request lcd power gpio failed, rc=%d\n",
+			rc);
+			return -ENODEV;
+			}
+			gpio_direction_output(lcd_power_en,1);
+			mdelay(50);
+			rc=gpio_get_value(lcd_power_en);
+			pr_err("%s: %d;lcd_power_en_value=%d\n", __func__,__LINE__,rc);
+			gpio_free(lcd_power_en);
+			#endif
+			/*[PLATFORM]-Mod-END by TCTSZ.jing.huang, 2014/08/18*/
+
 		if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
 			pr_debug("reset enable: pinctrl not enabled\n");
 
@@ -604,6 +660,11 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	if (mipi->init_delay)
 		usleep(mipi->init_delay);
 
+//[PLATFORM]-Add-BEGIN by TCTSZ.jinghuang, 2014/07/25, LCD NT51017 for POP10 use HS mode always
+#ifdef CONFIG_TCT_8X16_POP10
+	mipi->force_clk_lane_hs = 1;
+#endif
+//[PLATFORM]-Add-BEGIN by TCTSZ.jinghuang, 2014/07/25 
 	if (mipi->force_clk_lane_hs) {
 		u32 tmp;
 
@@ -674,6 +735,58 @@ static int mdss_dsi_pinctrl_init(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_TCT_8X16_IDOL347
+#include <linux/i2c.h>
+
+#define LCD_TPS65132_I2C_ADDRESS		       0x3E
+#define LCD_TPS65132_VPOS_ADDRESS		0x00
+#define LCD_TPS65132_VNEG_ADDRESS		0x01
+#define LCD_TPS65132_DIS_ADDRESS		       0x03
+#define LCD_TPS65132_CONTROL_ADDRESS       0xFF
+
+extern struct i2c_client *lcd_client;
+static int lcd_tps65132_i2c_write(u8 addr, u8 val)
+{
+	int ret = 0;
+	struct i2c_msg msg;
+	u8 data_buf[] = {addr,val};
+	
+       msg.flags = !I2C_M_RD;
+       msg.addr  = LCD_TPS65132_I2C_ADDRESS;
+       msg.len   = 2;
+       msg.buf   = data_buf;
+
+	ret = i2c_transfer(lcd_client->adapter, &msg, 1);
+	
+	if(ret < 0) {
+		pr_err( "i2c transfer  error %d\n", ret);
+		return ret;
+	}
+	return 0;
+}
+static int lcd_tps65132_init(void)
+{
+	int ret = 0;
+	
+	ret = lcd_tps65132_i2c_write(LCD_TPS65132_VPOS_ADDRESS, 0x0F); /* modify VPOS address 0x0F output 5.5V By BaoChangSheng*/
+	if (ret) {
+		printk("VPOS Register: I2C Write failure\n");
+	}
+	ret = lcd_tps65132_i2c_write(LCD_TPS65132_VNEG_ADDRESS, 0x0F); /* modify VNEG address 0x0F output -5.5V By BaoChangSheng*/
+	if (ret) {
+		printk("VNEG Register: I2C write failure\n");
+	}
+	ret = lcd_tps65132_i2c_write(LCD_TPS65132_DIS_ADDRESS, 0x0F);
+	if (ret) {
+		pr_err("Apps freq DIS Register: I2C write failure\n");
+	}
+       ret = lcd_tps65132_i2c_write(LCD_TPS65132_CONTROL_ADDRESS, 0xF0);
+	if (ret) {
+		pr_err("Control Register: I2C write failure\n");
+	}
+	return 1;
+}
+#endif
 static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -701,6 +814,14 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 		goto error;
 	}
 
+/* resume lcd output +/-5.5v by BaoChangSheng */
+#ifdef CONFIG_TCT_8X16_IDOL347
+       ret=lcd_tps65132_init();
+       if(ret<0){
+	   	pr_err("%s: tps65132 error\n", __func__);
+       }
+#endif
+/* resume lcd output +/-5.5v by BaoChangSheng */
 	if (!(ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT)) {
 		if (!pdata->panel_info.dynamic_switch_pending) {
 			ret = ctrl_pdata->on(pdata);
@@ -1831,6 +1952,17 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	if (!gpio_is_valid(ctrl_pdata->bklt_en_gpio))
 		pr_info("%s: bklt_en gpio not specified\n", __func__);
 
+	/*[PLATFORM]-Mod-BEGIN by TCTSZ.jing.huang, 2014/8/18,add lcd power io control*/
+#ifdef CONFIG_TCT_8X16_POP10
+	lcd_power_en = of_get_named_gpio(ctrl_pdev->dev.of_node,
+		 "qcom,platform-lcd-power-gpio", 0);
+
+	if (!gpio_is_valid(lcd_power_en))
+	pr_err("jinghuang:%s:%d, lcd_power_en gpio not specified\n",
+				__func__, __LINE__);
+#endif
+	/*[PLATFORM]-Mod-END by TCTSZ.jing.huang, 2014/08/18*/
+
 	ctrl_pdata->rst_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 			 "qcom,platform-reset-gpio", 0);
 	if (!gpio_is_valid(ctrl_pdata->rst_gpio))
@@ -1878,9 +2010,14 @@ int dsi_panel_device_register(struct device_node *pan_node,
 
 	ctrl_pdata->panel_data.event_handler = mdss_dsi_event_handler;
 
+#ifdef CONFIG_TCT_8X16_IDOL347
+        if (ctrl_pdata->status_mode == ESD_REG_HX8394D)
+                ctrl_pdata->check_status = mdss_dsi_hx8394d_reg_status_check;
+#else
 	if (ctrl_pdata->status_mode == ESD_REG ||
 			ctrl_pdata->status_mode == ESD_REG_NT35596)
 		ctrl_pdata->check_status = mdss_dsi_reg_status_check;
+#endif
 	else if (ctrl_pdata->status_mode == ESD_BTA)
 		ctrl_pdata->check_status = mdss_dsi_bta_status_check;
 
