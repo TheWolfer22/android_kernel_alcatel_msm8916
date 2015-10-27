@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,6 +27,22 @@
 				interrupt-controller;
 				#interrupt-cells = <2>;
 				num_irqs = <122>;
+			};
+		};
+
+		cdc-ext-spk-pa {
+			qcom,pins = <&gp 0>;
+			qcom,num-grp-pins = <1>;
+			qcom,pin-func = <0>;
+			label = "cdc-ext-spk-pa";
+			cdc_ext_spk_pa_act: ext_spk_pa_on {
+				drive-strength = <8>;
+				output-low;
+				bias-pull-none;
+			};
+			cdc_ext_spk_pa_sus: ext_spk_pa_off {
+				drive-strength = <2>;
+				bias-disable;
 			};
 		};
 
@@ -124,11 +140,11 @@
 			label = "cd-gpio";
 			sdc2_cd_on: cd_on {
 				drive-strength = <2>;
-				bias-pull-up;/* [PLATFORM]-MOD by TCTNB.YuBin, idol3 ds sd_cd_pin float need to pull up */
+				bias-pull-up;
 			};
 			sdc2_cd_off: cd_off {
 				drive-strength = <2>;
-				bias-pull-up;/* [PLATFORM]-MOD by TCTNB.YuBin, idol3 ds sd_cd_pin float need to pull up */
+				bias-disable;
 			};
 		};
 
@@ -289,10 +305,7 @@
 		};
 
 		usb-id-pin {
-                        /*[PLATFORM]-Mod-BEGIN by TCTNB.Bin.Su, PR-883930, 2014/12/30, Idle power consumption is high in airplane*/
-			//qcom,pins = <&gp 79>;/*NB.THW modify 2014/11/17*/
-                        qcom,pins = <&gp 69>;
-                        /* [PLATFORM]-Mod-END by TCTNB.Bin.Su */
+			qcom,pins = <&gp 110>;
 			qcom,num-grp-pins = <1>;
 			qcom,pin-func = <0>;
 			label = "usb-id-pin";
@@ -309,7 +322,7 @@
                         qcom,pin-func = <1>;
                         label = "spi0-active";
                         /* active state */
-                        spi0_default: default {
+                        spi0_default: spi0_default {
                                 drive-strength = <12>; /* 12 MA */
                                 bias-disable = <0>; /* No PULL */
                         };
@@ -322,7 +335,7 @@
                         qcom,pin-func = <0>;
                         label = "spi0-suspend";
                         /* suspended state */
-                        spi0_sleep: sleep {
+                        spi0_sleep: spi0_sleep {
                                 drive-strength = <2>; /* 2 MA */
 			        bias-pull-down; /* PULL Down */
                         };
@@ -378,7 +391,7 @@
                         qcom,pin-func = <1>;
                         label = "spi5-active";
                         /* active state */
-                        spi5_default: default {
+                        spi5_default: spi5_default {
                                 drive-strength = <16>; /* 16 MA */
                                 bias-disable = <0>; /* No PULL */
                         };
@@ -391,7 +404,7 @@
                         qcom,pin-func = <0>;
                         label = "spi5-suspend";
                         /* suspended state */
-                        spi5_sleep: sleep {
+                        spi5_sleep: spi5_sleep {
                                 drive-strength = <2>; /* 2 MA */
                                 bias-disable = <0>; /* No PULL */
                         };
@@ -436,11 +449,10 @@
 			};
 		};
 
-		/*[PLATFORM]-Mod-BEGIN by TCTNB.WJ, 2015/3/9, remove HALL1(GPIO_36), bug943274 */
 		tlmm_gpio_key {
-			qcom,pins = <&gp 107>, <&gp 98>;  /* <&gp 36>, <&gp 108>, <&gp 109> */
+			qcom,pins = <&gp 107>, <&gp 108>, <&gp 109>;
 			qcom,pin-func = <0>;
-			qcom,num-grp-pins = <2>;
+			qcom,num-grp-pins = <3>;
 			label = "tlmm_gpio_key";
 			gpio_key_active: gpio_key_active {
 				drive-strength = <2>;
@@ -525,6 +537,30 @@
 			};
 		};
 
+		mod_en_active {
+			qcom,pins = <&gp 97>;
+			qcom,pin-func = <0>;
+			qcom,num-grp-pins = <1>;
+			label = "mod_en_active";
+
+			mod_en_active: mod_en_active {
+				drive-strength = <16>;
+				output-high;
+			};
+		};
+
+		mod_en_suspend {
+			qcom,pins = <&gp 97>;
+			qcom,pin-func = <0>;
+			qcom,num-grp-pins = <1>;
+			label = "mod_en_suspend";
+
+			mod_en_suspend: mod_en_suspend {
+				drive-strength = <2>;
+				output-low;
+			};
+		};
+
 		disp_vsn_active {
 			qcom,pins = <&gp 77>;
 			qcom,pin-func = <0>;
@@ -549,6 +585,30 @@
 			};
 		};
 
+		ddic_rst_active {
+			qcom,pins = <&gp 25>;
+			qcom,pin-func = <0>;
+			qcom,num-grp-pins = <1>;
+			label = "ddic_rst_active";
+
+			ddic_rst_active: ddic_rst_active {
+				drive-strength = <16>;
+				output-high;
+			};
+		};
+
+		ddic_rst_suspend {
+			qcom,pins = <&gp 25>;
+			qcom,pin-func = <0>;
+			qcom,num-grp-pins = <1>;
+			label = "ddic_rst_suspend";
+
+			ddic_rst_suspend: ddic_rst_suspend {
+				drive-strength = <2>;
+				output-low;
+			};
+		};
+
 		pmx_ts_release {
 			qcom,pins = <&gp 13>, <&gp 12>;
 			qcom,num-grp-pins = <2>;
@@ -562,7 +622,7 @@
 
 		apds99xx_int_pin {
 			/* Ambient light and proximity sensor apds9930 and apds9900 */
-			qcom,pins = <&gp 34>;/*NB.THW modify 2014/11/17*/
+			qcom,pins = <&gp 113>;
 			qcom,pin-func = <0>;
 			qcom,num-grp-pins = <1>;
 			label = "apds99xx-irq";
@@ -578,13 +638,13 @@
 
 		mpu6050_int_pin {
 			/* Gyroscope and accelerometer sensor combo */
-			qcom,pins = <&gp 97>;/*NB.THW modify 2014/11/17*/
+			qcom,pins = <&gp 115>;
 			qcom,pin-func = <0>;
 			qcom,num-grp-pins = <1>;
 			label = "mpu6050-irq";
 			mpu6050_default: mpu6050_default {
 				drive-strength = <6>;
-				bias-pull-down;
+				bias-pull-up;
 			};
 			mpu6050_sleep: mpu6050_sleep {
 				drive-strength = <2>;
@@ -617,42 +677,11 @@
 				drive-strength = <2>;
 			};
 		};
-		/*NB.THW 2014/11/17 add for FR.789207*/
-		cdc-ext-pa-lines {
-			qcom,pins = <&gp 113>,
-					<&gp 115>;
-			qcom,num-grp-pins = <2>;
-			qcom,pin-func = <1>;
-			label = "cdc-ext-pa-lines";
-			cdc_ext_pa_act: ext_pa_on {
-				drive-strength = <8>;
-				bias-pull-none;
-			};
-			cdc_ext_pa_sus: ext_pa_off {
-				drive-strength = <2>;
-				bias-disable;
-			};
-		};
 
-		cdc-ext-pa-ws-line {
-			qcom,pins = <&gp 110>;
-			qcom,num-grp-pins = <1>;
-			qcom,pin-func = <2>;
-			label = "cdc-ext-pa-ws-line";
-			cdc_ext_pa_ws_act: ext_pa_on {
-				drive-strength = <8>;
-				bias-pull-none;
-			};
-			cdc_ext_pa_ws_sus: ext_pa_off {
-				drive-strength = <2>;
-				bias-disable;
-			};
-		};
-/*NB.THW 2014/11/17 end*/
 		ext-cdc-tlmm-lines {
-			qcom,pins = <&gp 112>, <&gp 117>,/*NB.THW 2014/11/17 remove for FR.789207*/
+			qcom,pins = <&gp 116>, <&gp 112>, <&gp 117>,
 					<&gp 118>, <&gp 119>;
-			qcom,num-grp-pins = <4>;/*NB.THW 2014/11/17 remove for FR.789207*/
+			qcom,num-grp-pins = <5>;
 			qcom,pin-func = <1>;
 			label = "ext-cdc-tlmm-lines";
 			ext_cdc_tlmm_lines_act: tlmm_lines_on {
@@ -692,7 +721,7 @@
 			};
 			cdc_pdm_lines_sus: pdm_lines_off {
 				drive-strength = <2>;
-				bias-disable;
+				bias-pull-down;
 			};
 		};
 
@@ -915,82 +944,7 @@
 				drive-strength = <3>; /* 3 MA */
 			};
 		};
-/*NB.THW 2014/11/17 add for FR.789207*/
 
-/* [PLATFORM]-Add-BEGIN by TCTNB.HJ, 2014/11/18, HIFI*/
-         akm_pwdn_active {
-             qcom,pins = <&gp 101>;
-             qcom,pin-func = <0>;
-             qcom,num-grp-pins = <1>;
-             label = "akm_pwdn_active";
-             akm_pwdn_active: akm_pwdn_active {
-                 drive-strength = <16>;
-                 output-high;
-             };
-         };
-
-         akm_pwdn_suspend {
-             qcom,pins = <&gp 101>;
-             qcom,pin-func = <0>;
-             qcom,num-grp-pins = <1>;
-             label = "akm_pwdn_suspend";
-             akm_pwdn_suspend: akm_pwdn_suspend {
-                 drive-strength = <2>;
-                 output-low;
-             };
-         };
-
-        akm_mclk_active {
-             qcom,pins = <&gp 116>;
-             qcom,pin-func = <0>;
-             qcom,num-grp-pins = <1>;
-             label = "akm_mclk_active";
-             akm_mclk_active: akm_mclk_active {
-                 drive-strength = <2>;
-                 bias-pull-down;
-                 output-low;
-             };
-         };
-
-         akm_mclk_suspend {
-             qcom,pins = <&gp 116>;
-             qcom,pin-func = <0>;
-             qcom,num-grp-pins = <1>;
-             label = "akm_mclk_suspend";
-             akm_mclk_suspend: akm_mclk_suspend {
-                 drive-strength = <2>;
-                 bias-pull-down;
-                 output-low;
-             };
-         };
-/*
-        ak4375_dac_ldo_ctl_active {
-			qcom,pins = <&gp 102>;
-			qcom,pin-func = <0>;
-			qcom,num-grp-pins = <1>;
-			label = "ak4375_dac_ldo_ctl_active";
-
-			dac_ldo_ctl_active: dac_ldo_ctl_active {
-				drive-strength = <16>;
-				bias-pull-up;
-			};
-		};
-
-        ak4375_dac_ldo_ctl_suspend {
-			qcom,pins = <&gp 102>;
-			qcom,pin-func = <0>;
-			qcom,num-grp-pins = <1>;
-			label = "ak4375_dac_ldo_ctl_suspend";
-
-			dac_ldo_ctl_suspend: dac_ldo_ctl_suspend  {
-				drive-strength = <2>;
-				bias-pull-down;
-			};
-		};
-*/
-/* [PLATFORM]-Add-END by TCTNB.HJ*/
-
-/*NB.THW 2014/11/17 end*/
 		cci0_pinmux {
 			/* CLK, DATA */
 			qcom,pins = <&gp 29>, <&gp 30>;
@@ -1060,7 +1014,7 @@
 
 		cam_sensor_rear {
 			/* RESET, STANDBY */
-			qcom,pins =  <&gp 35>, <&gp 94>;
+			qcom,pins =  <&gp 35>, <&gp 34>;
 			qcom,num-grp-pins = <2>;
 			qcom,pin-func = <0>;
 			label = "cam-sensor-rear";
@@ -1073,7 +1027,7 @@
 
 		cam_sensor_rear_sleep {
 			/* RESET, STANDBY */
-			qcom,pins =  <&gp 35>, <&gp 94>;
+			qcom,pins =  <&gp 35>, <&gp 34>;
 			qcom,num-grp-pins = <2>;
 			qcom,pin-func = <0>;
 			label = "cam-sensor-rear-sleep";
@@ -1112,10 +1066,8 @@
 
 		cam_sensor_flash {
 			/* FLSH_RESET,FLASH_EN,FLASH_NOW */
-			/*[PLATFORM]-Mod-BEGIN by TCTNB.WJ, 2015/1/4, conflict with HALL */
-			qcom,pins = <&gp 31>,<&gp 32> ;   /* <&gp 36> */
-			qcom,num-grp-pins = <2>;   /* <3>; */
-			/*[PLATFORM]-Mod-End */
+			qcom,pins = <&gp 36>, <&gp 31>,<&gp 32> ;
+			qcom,num-grp-pins = <3>;
 			qcom,pin-func = <0>;
 			label = "cam_sensor_flash";
 			/* active state */
@@ -1129,31 +1081,6 @@
 				bias-pull-down = <0>; /* PULL DOWN */
 			};
 		};
-
-/* [PLATFORM]-Add-BEGIN by TCTNB.CY, PR-887679, 2014/12/31, lcd power ic gpio configure*/
-		lcd_power {
-			/* LCD power IC gpio configure*/
-			qcom,pins =  <&gp 106>, <&gp 105>;
-			qcom,num-grp-pins = <2>;
-			qcom,pin-func = <0>;
-			label = "lcd_power";
-/* [PLATFORM]-Mod-BEGIN by TCTNB.CY, CR-874734, 2015/1/28, modify for LCD power ic enable gpio output*/
-			/* active state */
-			lcd_power_active: active {
-				drive-strength = <2>; /* 2 MA */
-				bias-pull-up; /* pull up */
-				output-high;
-			};
-
-			lcd_power_suspend: suspend {
-				drive-strength = <2>; /* 2 mA */
-				bias-pull-down; /* pull down */
-				output-low;
-			};
-/* [PLATFORM]-Mod-END by TCTNB.CY,  2015/1/28*/
-
-		};
-/* [PLATFORM]-Add-END by TCTNB.CY, 2014/12/31*/
 
 		/* CoreSight */
 		tpiu_seta_1 {
@@ -1575,58 +1502,5 @@
 				bias-pull-down;
 			};
 		};
-
- /* [PLATFORM]-Add-BEGIN by TCTNB.ZXZ, FR-790438, 2014/12/08, config unused gpios for idol3 */
-                 unused_gpio_config{
-                         qcom,pins = <&gp 11>,<&gp 49>,<&gp 50>,<&gp 51>, <&gp 52>,<&gp 74>, <&gp 77>,
-					<&gp 81>,<&gp 95>;
-                         qcom,num-grp-pins = <9>;
-                         qcom,pin-func = <0>;
-                         label = "unused_gpio_config";
-                         /* active state */
-                         unused_gpio_default: default {
-                                 drive-strength = <2>; /* 2 MA */
-                                 bias-pull-down;
-                         };
-                         /*suspended state */
-                         unused_gpio_sleep: sleep {
-                                 drive-strength = <2>; /* 2 MA */
-                                 bias-pull-down;
-                         };
-                 };
- /* [PLATFORM]-Add-BEGIN by TCTNB.ZXZ */
-	        tsl2772x_int_pin { /* [BUFFIX]-Add- by TCTNB.XQJ,PR-886227, 2015/2/2, init int gpio*/
-			qcom,pins = <&gp 34>; /*TIANHONGWEI MODIFY*/
-			qcom,pin-func = <0>;
-			qcom,num-grp-pins = <1>;
-			label = "tsl2772x-irq";
-			tsl2772x_default: tsl2772x_default {
-				drive-strength = <6>;
-				bias-pull-up;
-			};
-			tsl2772x_sleep: tsl2772x_sleep {
-				drive-strength = <2>;
-				bias-pull-down;
-			};
-		};
-
-/* [PLATFORM]-Add-BEGIN by TCTNB.Yubin, 2015/02/06, config sim det gpios for idol3 to make sd card det voltage is right */
-                 unused_gpio_config2{
-                         qcom,pins = <&gp 60>,<&gp 56>;
-                         qcom,num-grp-pins = <2>;
-                         qcom,pin-func = <1>;
-                         label = "simcard_det_pins";
-                         /* active state */
-                         simcard_det_pins_default: default {
-                                 drive-strength = <2>; /* 2 MA */
-                                 bias-pull-up;
-                         };
-                         /*suspended state */
-                         simcard_det_pins_sleep: sleep {
-                                 drive-strength = <2>; /* 2 MA */
-                                 bias-pull-up;
-                         };
-                 };
-/* [PLATFORM]-Add-BEGIN by TCTNB.YuBin */
 	};
 };
