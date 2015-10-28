@@ -513,11 +513,11 @@
 		compatible = "qcom,msm-thermal";
 		qcom,sensor-id = <5>;
 		qcom,poll-ms = <250>;
-		qcom,limit-temp = <60>;
+		qcom,limit-temp = <74>;  /*[BUGFIX] added By Miao, 902619 */
 		qcom,temp-hysteresis = <10>;
 		qcom,freq-step = <2>;
 		qcom,freq-control-mask = <0xff>;
-		qcom,core-limit-temp = <80>;
+		qcom,core-limit-temp = <94>;/*[BUGFIX] added By Miao, 902619 */
 		qcom,core-temp-hysteresis = <10>;
 		qcom,core-control-mask = <0xfe>;
 		qcom,hotplug-temp = <105>;
@@ -823,7 +823,7 @@
 		reg = <0x086000c8 0xc8>;
 		qcom,pm-qos-latency = <2 1001 12701>;
 		qcom,streaming-func = "rndis","mtp";
-		qcom,android-usb-uicc-nluns = /bits/ 8 <1>;
+		qcom,android-usb-uicc-nluns = /bits/ 8 <0>;//[BUGFIX]-Add-BEGIN by TCTNB.93391,12/20/2014,794572,Remove UICC Disk Devices
 	};
 
 	uicc: qcom,ehci-host@79c0000 {
@@ -948,7 +948,7 @@
 		reg = <0x78b8000 0x1000>;
 		interrupt-names = "qup_irq";
 		interrupts = <0 98 0>;
-		qcom,clk-freq-out = <100000>;
+		qcom,clk-freq-out = <400000>;/*Tianhongwei modfiy for PR.933220 */
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
 		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
@@ -1037,7 +1037,7 @@
 
 	qcom,rmtfs_sharedmem@8e580000 {
 		compatible = "qcom,sharedmem-uio";
-		reg = <0x86700000 0x160000>;
+		reg = <0x86681000 0x15f000>;
 		reg-names = "rmtfs";
 		qcom,client-id = <0x00000001>;
 	};

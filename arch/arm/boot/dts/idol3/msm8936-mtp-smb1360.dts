@@ -60,6 +60,7 @@
 };
 
 &cci {
+/*
 	led_flash0: qcom,led-flash@66 {
 		cell-index = <0>;
 		reg = <0x66>;
@@ -85,7 +86,7 @@
 			"FLASH_NOW";
 		qcom,cci-master = <0>;
 	};
-
+*/
 	qcom,camera@0 {
 		qcom,led-flash-src = <&led_flash0>;
 	};
