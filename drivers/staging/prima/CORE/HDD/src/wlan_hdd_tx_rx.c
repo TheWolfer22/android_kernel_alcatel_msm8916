@@ -90,6 +90,13 @@ const v_U8_t hdd_QdiscAcToTlAC[] = {
 #define HDD_TX_STALL_SSR_THRESHOLD        5
 #define HDD_TX_STALL_SSR_THRESHOLD_HIGH   13
 #define HDD_TX_STALL_RECOVERY_THRESHOLD HDD_TX_STALL_SSR_THRESHOLD - 2
+#define HDD_TX_STALL_KICKDXE_THRESHOLD  HDD_TX_STALL_SSR_THRESHOLD - 4
+#define HDD_TX_STALL_FATAL_EVENT_THRESHOLD 2
+#define EAPOL_MASK 0x8013
+#define EAPOL_M1_BIT_MASK 0x8000
+#define EAPOL_M2_BIT_MASK 0x0001
+#define EAPOL_M3_BIT_MASK 0x8013
+#define EAPOL_M4_BIT_MASK 0x0003
 
 int gRatefromIdx[] = {
  10,20,55,100,
@@ -1168,13 +1175,25 @@ void __hdd_tx_timeout(struct net_device *dev)
       goto print_log;
    }
    if (pAdapter->hdd_stats.hddTxRxStats.continuousTxTimeoutCount ==
+          HDD_TX_STALL_KICKDXE_THRESHOLD)
+   {
+      VOS_TRACE(VOS_MODULE_ID_HDD_SAP_DATA, VOS_TRACE_LEVEL_ERROR,
+                "%s: Request Kick DXE for recovery",__func__);
+      WLANTL_TLDebugMessage(WLANTL_DEBUG_KICKDXE);
+   }
+   if (pAdapter->hdd_stats.hddTxRxStats.continuousTxTimeoutCount ==
           HDD_TX_STALL_RECOVERY_THRESHOLD)
    {
       VOS_TRACE(VOS_MODULE_ID_HDD_SAP_DATA, VOS_TRACE_LEVEL_ERROR,
                 "%s: Request firmware for recovery",__func__);
       WLANTL_TLDebugMessage(WLANTL_DEBUG_FW_CLEANUP);
    }
-
+   /*
+    * This function is getting called in softirq context, So don't hold
+    * any mutex.
+    * There is no harm here in not holding the mutex as long as we are
+    * not accessing the pRemainChanCtx contents.
+    */
    pRemainChanCtx = hdd_get_remain_on_channel_ctx(pHddCtx);
    if (!pRemainChanCtx)
    {
@@ -1191,6 +1210,7 @@ void __hdd_tx_timeout(struct net_device *dev)
    }
    else
    {
+       mutex_unlock(&pHddCtx->roc_lock);
       VOS_TRACE(VOS_MODULE_ID_HDD_DATA, VOS_TRACE_LEVEL_ERROR,
                 "Remain on channel in progress");
       /* The supplicant can retry "P2P Invitation Request" for 120 times
@@ -2358,6 +2378,12 @@ static void hdd_mon_add_rx_radiotap_hdr (struct sk_buff *skb,
        rateIdx-=202;
     if( rateIdx >= 218 && rateIdx <= 225 )
        rateIdx-=210;
+
+    if(rateIdx > (sizeof(gRatefromIdx)/ sizeof(int))) {
+       VOS_TRACE( VOS_MODULE_ID_HDD_DATA, VOS_TRACE_LEVEL_ERROR,
+                  "%s: invalid rateIdx %d make it 0", __func__, rateIdx);
+       rateIdx = 0;
+    }
     currentRSSI0 = WDA_GETRSSI0(pRxPacket) - 100;
     currentRSSI1 = WDA_GETRSSI1(pRxPacket) - 100;
     currentRSSI  = (currentRSSI0 > currentRSSI1) ? currentRSSI0 : currentRSSI1;
@@ -2422,6 +2448,15 @@ VOS_STATUS  hdd_rx_packet_monitor_cbk(v_VOID_t *vosContext,vos_pkt_t *pVosPacket
    }
 
    pHddCtx = (hdd_context_t *)vos_get_context( VOS_MODULE_ID_HDD, vosContext );
+
+   if (NULL == pHddCtx)
+   {
+      VOS_TRACE(VOS_MODULE_ID_HDD_DATA, VOS_TRACE_LEVEL_ERROR,
+                 FL("Failed to get pHddCtx from vosContext"));
+      vos_pkt_return_packet( pVosPacket );
+      return VOS_STATUS_E_FAILURE;
+   }
+
    pAdapter = hdd_get_adapter(pHddCtx,WLAN_HDD_MONITOR);
    if ((NULL == pAdapter)  || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic) )
    {

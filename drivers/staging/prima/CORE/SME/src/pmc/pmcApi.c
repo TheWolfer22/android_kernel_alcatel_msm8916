@@ -1345,16 +1345,32 @@ static void pmcProcessResponse( tpAniSirGlobal pMac, tSirSmeRsp *pMsg )
                     pmcLog(pMac, LOGE, FL("SSR Is in progress do not send "
                                           "exit imps req again"));
                 }
-                else if( eHAL_STATUS_SUCCESS ==
-                      pmcSendMessage(pMac, eWNI_PMC_EXIT_IMPS_REQ, NULL, 0) )
+                else if( (pMac->pmc.ImpsRspFailCnt <=
+                           BMPS_IMPS_FAILURE_REPORT_THRESHOLD))
                 {
-                    fRemoveCommand = eANI_BOOLEAN_FALSE;
-                    pMac->pmc.pmcState = REQUEST_FULL_POWER;
-                    pmcLog(pMac, LOGE, FL("eWNI_PMC_EXIT_IMPS_REQ sent again"
-                                          " to PE"));
+                    pMac->pmc.ImpsRspFailCnt++;
+                    if (eHAL_STATUS_SUCCESS ==
+                        pmcSendMessage(pMac, eWNI_PMC_EXIT_IMPS_REQ, NULL, 0) )
+                    {
+                        fRemoveCommand = eANI_BOOLEAN_FALSE;
+                        pMac->pmc.pmcState = REQUEST_FULL_POWER;
+                        pmcLog(pMac, LOGE, FL("eWNI_PMC_EXIT_IMPS_REQ sent again"
+                                              " to PE"));
+                        break;
+                    }
+                }
+                else
+                {
+                    pMac->pmc.ImpsRspFailCnt = 0;
+                    VOS_ASSERT(0);
                     break;
                 }
             }
+            else
+            {
+                pMac->pmc.ImpsRspFailCnt = 0;
+            }
+
             pmcEnterFullPowerState(pMac);
         break;
 
@@ -2187,12 +2203,18 @@ eHalStatus pmcWowlAddBcastPattern (
     if(pattern == NULL)
     {
         pmcLog(pMac, LOGE, FL("Null broadcast pattern being passed"));
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
+        WLAN_VOS_DIAG_LOG_FREE(log_ptr);
+#endif
         return eHAL_STATUS_FAILURE;
     }
 
     if( pSession == NULL)
     {
         pmcLog(pMac, LOGE, FL("Session not found "));
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
+        WLAN_VOS_DIAG_LOG_FREE(log_ptr);
+#endif
         return eHAL_STATUS_FAILURE;
     }
 
@@ -3072,7 +3094,8 @@ eHalStatus pmcSetPreferredNetworkList
     pCommand->command = eSmeCommandPnoReq;
     pCommand->sessionId = (tANI_U8)sessionId;
 
-    if (!HAL_STATUS_SUCCESS(csrQueueSmeCommand(pMac, pCommand, TRUE)))
+    if (!HAL_STATUS_SUCCESS(csrQueueSmeCommand(pMac, pCommand,
+                                               !pRequestBuf->enable)))
     {
         VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
                   FL("failed to post eSmeCommandPnoReq command"));

@@ -431,6 +431,8 @@ typedef struct
    wpt_uint8            wdaAddSelfStaFailReason;
 } tWDA_AddSelfStaDebugParams;
 
+#define BMPS_IMPS_FAILURE_REPORT_THRESHOLD    10
+
 typedef struct
 {
    v_PVOID_t            pVosContext;             /* global VOSS context*/
@@ -499,6 +501,7 @@ typedef struct
    vos_event_t          ftmStopDoneEvent;
 
    tWDA_AddSelfStaDebugParams wdaAddSelfStaParams;
+   wpt_uint8  mgmtTxfailureCnt;
 
 } tWDA_CbContext ; 
 
@@ -2058,6 +2061,22 @@ void WDA_TransportChannelDebug
   v_BOOL_t       displaySnapshot,
   v_U8_t         debugFlags
 );
+
+/*==========================================================================
+  FUNCTION   WDA_TransportKickDxe
+
+  DESCRIPTION
+    Request Kick DXE when first hdd TX time out
+    happens
+
+  PARAMETERS
+    NONE
+
+  RETURN VALUE
+    NONE
+
+===========================================================================*/
+void WDA_TransportKickDxe(void);
 
 /*==========================================================================
   FUNCTION   WDA_TrafficStatsTimerActivate

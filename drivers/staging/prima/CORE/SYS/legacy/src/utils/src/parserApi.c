@@ -367,7 +367,7 @@ PopulateDot11fDSParams(tpAniSirGlobal     pMac,
                        tDot11fIEDSParams *pDot11f, tANI_U8 channel,
                        tpPESession psessionEntry)
 {
-    if ((IS_24G_CH(channel)) || pMac->rrm.rrmPEContext.rrmEnable)
+    if (IS_24G_CH(channel))
     {
         // .11b/g mode PHY => Include the DS Parameter Set IE:
         pDot11f->curr_channel = channel;
@@ -2349,6 +2349,7 @@ tSirRetStatus sirConvertProbeFrame2Struct(tpAniSirGlobal       pMac,
         vos_mem_copy( &pProbeResp->VHTExtBssLoad, &pr->VHTExtBssLoad, sizeof( tDot11fIEVHTExtBssLoad) );
     }
 #endif
+
     vos_mem_vfree(pr);
     return eSIR_SUCCESS;
 
@@ -3443,6 +3444,12 @@ sirParseBeaconIE(tpAniSirGlobal        pMac,
     }
 
 #endif
+    if (pBies->ExtCap.present )
+    {
+        pBeaconStruct->ExtCap.present = 1;
+        vos_mem_copy( &pBeaconStruct->ExtCap, &pBies->ExtCap,
+                        sizeof(tDot11fIEExtCap));
+    }
     vos_mem_free(pBies);
 
 
@@ -3754,6 +3761,7 @@ sirConvertBeaconFrame2Struct(tpAniSirGlobal       pMac,
                      &pBeacon->OBSSScanParameters,
                      sizeof( tDot11fIEOBSSScanParameters));
     }
+
     vos_mem_vfree(pBeacon);
     return eSIR_SUCCESS;
 
