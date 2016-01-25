@@ -1461,10 +1461,6 @@ static int wcd_mbhc_get_button_mask(struct wcd_mbhc *mbhc)
 	case 4:
 		mask = SND_JACK_BTN_4;
 		break;
-<<<<<<< HEAD
-#endif
-/* [PLATFORM]-Add-EN by TCTNB.HJ, 2015/01/23*/
-=======
 	case 5:
 		mask = SND_JACK_BTN_5;
 		break;
@@ -1474,7 +1470,8 @@ static int wcd_mbhc_get_button_mask(struct wcd_mbhc *mbhc)
 	case 7:
 		mask = SND_JACK_BTN_7;
 		break;
->>>>>>> bd52eaa8745678c459675b1f16bb9fc40d6eee34
+#endif
+/* [PLATFORM]-Add-EN by TCTNB.HJ, 2015/01/23*/
 	default:
 		break;
 	}

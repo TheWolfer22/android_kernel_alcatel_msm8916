@@ -525,12 +525,6 @@ void msm_isp_sof_notify(struct vfe_device *vfe_dev,
 		if (vfe_dev->axi_data.src_info[frame_src].frame_id == 0)
 			vfe_dev->axi_data.src_info[frame_src].frame_id = 1;
 		break;
-<<<<<<< HEAD
-=======
-	case ISP_EVENT_REG_UPDATE:
-		vfe_dev->axi_data.src_info[frame_src].last_updt_frm_id = 0;
-		break;
->>>>>>> bd52eaa8745678c459675b1f16bb9fc40d6eee34
 	default:
 		pr_err("%s: invalid frame src %d received\n",
 			__func__, frame_src);

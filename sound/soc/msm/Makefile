@@ -78,7 +78,6 @@ snd-soc-mdm9630-objs := mdm9630.o
 obj-$(CONFIG_SND_SOC_MDM9630) += snd-soc-mdm9630.o
 
 # for MSM 8x16 sound card driver
-<<<<<<< HEAD
 ifdef CONFIG_TCT_8X16_IDOL3
 snd-soc-msm8x16-objs := msm8x16_idol3.o
 obj-$(CONFIG_SND_SOC_MSM8X16) += snd-soc-msm8x16.o tfa9897.o
@@ -87,10 +86,7 @@ ifdef CONFIG_TCT_8X16_IDOL347
 snd-soc-msm8x16-objs := msm8x16_idol347.o msm8939-slimbus.o
 obj-$(CONFIG_SND_SOC_MSM8X16) += snd-soc-msm8x16.o
 else
-snd-soc-msm8x16-objs := msm8x16.o msm8939-slimbus.o
-=======
 snd-soc-msm8x16-objs := msm8x16.o msm8939-slimbus.o msm-audio-pinctrl.o
->>>>>>> bd52eaa8745678c459675b1f16bb9fc40d6eee34
 obj-$(CONFIG_SND_SOC_MSM8X16) += snd-soc-msm8x16.o
 endif
 endif

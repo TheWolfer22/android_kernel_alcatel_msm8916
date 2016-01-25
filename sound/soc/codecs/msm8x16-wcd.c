@@ -5504,17 +5504,12 @@ static int msm8x16_wcd_codec_probe(struct snd_soc_codec *codec)
 /* [PLATFORM]-Add-BEGIN by TCTNB.HJ, 2014/11/19, headset det*/
 #if defined(CONFIG_TCT_8X16_IDOL3) || defined(CONFIG_TCT_8X16_IDOL347)
 	wcd_mbhc_init(&msm8x16_wcd_priv->mbhc, codec, &mbhc_cb, &intr_ids,
-			false);
+		      wcd_mbhc_registers, false);
 #else
 	wcd_mbhc_init(&msm8x16_wcd_priv->mbhc, codec, &mbhc_cb, &intr_ids,
-<<<<<<< HEAD
-			true);
+		      wcd_mbhc_registers, true);
 #endif
 /* [PLATFORM]-Add-END by TCTNB.HJ*/
-=======
-		      wcd_mbhc_registers, true);
-
->>>>>>> bd52eaa8745678c459675b1f16bb9fc40d6eee34
 	msm8x16_wcd_priv->mclk_enabled = false;
 	msm8x16_wcd_priv->clock_active = false;
 	msm8x16_wcd_priv->config_mode_active = false;
