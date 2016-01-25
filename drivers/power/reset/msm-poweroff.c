@@ -231,10 +231,13 @@ static void msm_restart_prepare(const char *cmd)
 			(in_panic || restart_mode == RESTART_DLOAD));
 #endif
 
+<<<<<<< HEAD
 	need_warm_reset = (get_dload_mode() ||
 				(restart_mode == RESTART_DLOAD) ||
 				(cmd != NULL && cmd[0] != '\0'));
 
+=======
+>>>>>>> bd52eaa8745678c459675b1f16bb9fc40d6eee34
 	if (qpnp_pon_check_hard_reset_stored()) {
 		/* Set warm reset as true when device is in dload mode
 		 *  or device doesn't boot up into recovery, bootloader or rtc.
@@ -246,6 +249,9 @@ static void msm_restart_prepare(const char *cmd)
 			strcmp(cmd, "bootloader") &&
 			strcmp(cmd, "rtc")))
 			need_warm_reset = true;
+	} else {
+		need_warm_reset = (get_dload_mode() ||
+				(cmd != NULL && cmd[0] != '\0'));
 	}
 
 	/* Hard reset the PMIC unless memory contents must be maintained. */
